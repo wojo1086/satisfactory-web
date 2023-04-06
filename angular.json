@@ -17,7 +17,7 @@
                 "build": {
                     "builder": "@angular-devkit/build-angular:browser",
                     "options": {
-                        "outputPath": "docs",
+                        "outputPath": "dist/satisfactory-web",
                         "index": "src/index.html",
                         "main": "src/main.ts",
                         "polyfills": [
@@ -100,7 +100,7 @@
                         "scripts": []
                     }
                 },
-                "deploy": {
+                "fire-deploy": {
                     "builder": "@angular/fire:deploy",
                     "options": {
                         "prerender": false,
@@ -109,6 +109,9 @@
                         "firebaseProject": "satisfactory-a0b5d",
                         "firebaseHostingSite": "satisfactory-a0b5d"
                     }
+                },
+                "deploy": {
+                  "builder": "angular-cli-ghpages:deploy"
                 }
             }
         }
