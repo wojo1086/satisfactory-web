@@ -6,5 +6,11 @@ import { Component } from '@angular/core';
   styleUrls: ['./app.component.sass']
 })
 export class AppComponent {
-  title = 'satisfactory-web';
+    navItems = [
+        {
+            text: 'Productivity',
+            icon: 'pi-calculator',
+            route: 'productivity'
+        }
+    ];
 }
