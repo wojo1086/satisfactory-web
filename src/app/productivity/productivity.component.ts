@@ -3,6 +3,11 @@ import { Items, items } from '../../assets/data/items';
 import { combineLatest, debounceTime, map, of, startWith } from 'rxjs';
 import { AbstractControl, FormBuilder, FormGroup } from '@angular/forms';
 
+interface CurrentlyEditing {
+    parentKey: string;
+    recipeKey: string;
+}
+
 @Component({
   selector: 'app-productivity',
   templateUrl: './productivity.component.html',
@@ -10,7 +15,7 @@ import { AbstractControl, FormBuilder, FormGroup } from '@angular/forms';
 })
 export class ProductivityComponent implements AfterViewInit, OnInit {
     @ViewChild('productivityGroupRate', {static: false}) productivityGroupRate!: ElementRef;
-    private currentlyEditing!: AbstractControl | undefined;
+    private currentlyEditing: CurrentlyEditing = {} as CurrentlyEditing;
     search = this.fb.control('');
     items: Items | any = items;
     items$ = combineLatest([this.search.valueChanges.pipe(debounceTime(300), startWith('')), of(items)]).pipe(
@@ -47,16 +52,58 @@ export class ProductivityComponent implements AfterViewInit, OnInit {
     }
 
     save(): void {
-        this.currentlyEditing?.patchValue({editing: false});
-        this.currentlyEditing = undefined;
-        console.log('saved');
-        // this.updateTotalsAndRemaining();
+        if (!this.currentlyEditing.recipeKey) {
+            return;
+        }
+        const {parentKey, recipeKey} = this.currentlyEditing;
+        const fg = this.productivityGroup.get(parentKey as string)?.get('recipes')?.get(recipeKey as string);
+        fg?.patchValue({editing: false});
+        this.currentlyEditing = {} as CurrentlyEditing;
+        this.resetTotal(parentKey);
+        this.updateTotalAndRemaining(parentKey);
+        // this.updateTotalsAndRemaining(this.productivityGroup.controls);
         // this.saveToStorage();
     }
 
-    toggleInlineInput(fg: AbstractControl): void {
-        fg?.patchValue({editing: true});
-        setTimeout(() => this.currentlyEditing = fg, 100);
+    toggleInlineInput(parentKey: string, recipeKey: string): void {
+        const fg = this.productivityGroup.get(parentKey)?.get('recipes')?.get(recipeKey);
+        setTimeout(() => {
+            fg?.patchValue({editing: true});
+            this.currentlyEditing = {
+                parentKey,
+                recipeKey
+            };
+        }, 100);
+    }
+
+    private updateTotalAndRemaining(parentKey: string): void {
+        for (const recipe in this.productivityGroup.get(parentKey)?.value.recipes) {
+            console.log(recipe)
+        }
+    }
+
+    private updateTotalsAndRemaining(controls: {[key: string]: AbstractControl<any>}): void {
+        for (const controlKey in controls) {
+            console.log(this.items[controlKey])
+            const recipes = controls[controlKey]?.get('recipes') as FormGroup;
+            if (Object.keys(recipes?.controls).length > 0) {
+                for (const recipeControl in recipes?.controls) {
+                    let subTotal = this.productivityGroup.get(controlKey)?.value.total;
+                    const recipeRate = recipes?.get(recipeControl)?.value.rate;
+                    this.productivityGroup.get(controlKey)?.patchValue({total: subTotal + recipeRate});
+                }
+            }
+        }
+    }
+
+    private resetTotal(key: string): void {
+        this.productivityGroup.get(key)?.patchValue({total: 0, remaining: 0});
+    }
+
+    private resetAllTotals(): void {
+        for (const itemControl in this.productivityGroup.controls) {
+            this.resetTotal(itemControl);
+        }
     }
 
     private initProductionForm(): void {

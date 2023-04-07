@@ -10,7 +10,7 @@
     </div>
 </div>
 
-<form [formGroup]="productivityGroup">
+<form [formGroup]="productivityGroup" (ngSubmit)="save()">
     <p-card *ngFor="let item of $any(items$ | async) | keyvalue | filter:filterHandPicked"
             [formGroupName]="item.key" styleClass="productivity-items m-3">
         <ng-template pTemplate="header">
@@ -19,30 +19,31 @@
                     <img [src]="'assets/images/' + item.key + '.png'" height="32px" [alt]="item.value.name">
                 </div>
                 <h3 class="flex-1 text-primary">{{item.value.name}}</h3>
-                <p class="w-10rem font-bold text-lg">
-                    {{productivityGroup.get(item.key)?.get('total')?.value | number}}
-                    <span *ngIf="items[item.key].piped">m3</span>
-                </p>
                 <p class="w-10rem font-bold text-lg"
                    [ngClass]="{'negative': productivityGroup.get(item.key)?.get('remaining')?.value < 0, 'positive': productivityGroup.get(item.key)?.get('remaining')?.value > 0}">
                     {{productivityGroup.get(item.key)?.get('remaining')?.value | number}}
+                    <span *ngIf="items[item.key].piped">m3</span>
+                </p>
+                <p class="w-10rem font-bold text-lg">
+                    {{productivityGroup.get(item.key)?.get('total')?.value | number}}
                     <span *ngIf="items[item.key].piped">m3</span>
                 </p>
             </div>
         </ng-template>
         <ul class="list-none m-0 px-2">
             <ng-container *ngFor="let recipe of item.value.recipes | keyvalue | filter:{}; let last = last" formGroupName="recipes">
-                <li class="flex" [formGroupName]="recipe.key">
+                <li class="flex align-items-center" [formGroupName]="recipe.key" style="height:42px">
                     <p class="flex-1 m-0">{{recipe.value.name}}</p>
                     <p class="w-10rem text-white-alpha-70 m-0 cursor-pointer"
                        *ngIf="!productivityGroup.get(item.key)?.get('recipes')?.get(recipe.key)?.value.editing"
-                       (click)="toggleInlineInput($any(productivityGroup.get(item.key)?.get('recipes')?.get(recipe.key)))">
+                       (click)="toggleInlineInput(item.key, recipe.key)">
                         {{productivityGroup.get(item.key)?.get('recipes')?.get(recipe.key)?.value.rate}}
                         <span *ngIf="items[item.key].piped">m3</span>
                     </p>
                     <input
                         *ngIf="productivityGroup.get(item.key)?.get('recipes')?.get(recipe.key)?.value.editing"
-                        type="number" min="0" formControlName="rate" #productivityGroupRate>
+                        class="p-inputtext-sm" appAutoFocus
+                        pInputText type="number" min="0" formControlName="rate" #productivityGroupRate>
                 </li>
                 <p-divider *ngIf="!last"></p-divider>
             </ng-container>

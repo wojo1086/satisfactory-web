@@ -7,6 +7,7 @@ import { CardModule } from 'primeng/card';
 import { DividerModule } from 'primeng/divider';
 import { InputTextModule } from 'primeng/inputtext';
 import { ReactiveFormsModule } from '@angular/forms';
+import { AutoFocusDirective } from '../shared/auto-focus/auto-focus.directive';
 
 const routes: Routes = [
     {
@@ -18,7 +19,8 @@ const routes: Routes = [
 @NgModule({
     declarations: [
         ProductivityComponent,
-        FilterPipe
+        FilterPipe,
+        AutoFocusDirective
     ],
     imports: [
         CommonModule,
@@ -26,7 +28,7 @@ const routes: Routes = [
         CardModule,
         DividerModule,
         InputTextModule,
-        ReactiveFormsModule
+        ReactiveFormsModule,
     ]
 })
 export class ProductivityModule {
