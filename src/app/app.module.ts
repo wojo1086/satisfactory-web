@@ -14,6 +14,7 @@ import { StyleClassModule } from 'primeng/styleclass';
 import { ButtonModule } from 'primeng/button';
 import { OverlayPanelModule } from 'primeng/overlaypanel';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { FIREBASE_OPTIONS } from '@angular/fire/compat';
 
 @NgModule({
     declarations: [
@@ -34,7 +35,9 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
         OverlayPanelModule
     ],
     providers: [
-        ScreenTrackingService, UserTrackingService
+        ScreenTrackingService,
+        UserTrackingService,
+        { provide: FIREBASE_OPTIONS, useValue: environment.firebase }
     ],
     bootstrap: [AppComponent]
 })

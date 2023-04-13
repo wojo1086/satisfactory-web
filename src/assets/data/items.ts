@@ -6041,7 +6041,7 @@ export const items: Items = {
                 name: "Thermal Propulsion Rocket",
                 machine: "manufacturer",
                 inputs: {
-                    modularFrame: {
+                    modularEngine: {
                         amount: 5,
                         rate: 2.5
                     },

@@ -1,7 +1,12 @@
-import { AfterViewInit, Component, ElementRef, OnInit, Renderer2, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, Renderer2, ViewChild } from '@angular/core';
 import { Items, items } from '../../assets/data/items';
-import { combineLatest, debounceTime, map, of, startWith } from 'rxjs';
+import { combineLatest, debounceTime, map, of, startWith, Subscription } from 'rxjs';
 import { AbstractControl, FormBuilder, FormGroup } from '@angular/forms';
+import { AuthService } from '../shared/services/auth/auth.service';
+import { doc, docData, Firestore, setDoc } from '@angular/fire/firestore';
+import { UserService } from '../shared/services/user/user.service';
+import { Auth, user, User } from '@angular/fire/auth';
+import { StorageService } from '../shared/services/storage/storage.service';
 
 interface CurrentlyEditing {
     parentKey: string;
@@ -13,9 +18,13 @@ interface CurrentlyEditing {
   templateUrl: './productivity.component.html',
   styleUrls: ['./productivity.component.sass']
 })
-export class ProductivityComponent implements AfterViewInit, OnInit {
+export class ProductivityComponent implements AfterViewInit, OnInit, OnDestroy {
     @ViewChild('productivityGroupRate', {static: false}) productivityGroupRate!: ElementRef;
     private currentlyEditing: CurrentlyEditing = {} as CurrentlyEditing;
+    private firestore: Firestore = inject(Firestore);
+    private auth: Auth = inject(Auth);
+    user$ = user(this.auth);
+    userSubscription!: Subscription;
     search = this.fb.control('');
     items: Items | any = items;
     items$ = combineLatest([this.search.valueChanges.pipe(debounceTime(300), startWith('')), of(items)]).pipe(
@@ -36,11 +45,26 @@ export class ProductivityComponent implements AfterViewInit, OnInit {
     filterHandPicked = {handPicked: true};
     productivityGroup!: FormGroup;
 
-    constructor(private renderer: Renderer2, private fb: FormBuilder) {
+    constructor(private renderer: Renderer2,
+                private authService: AuthService,
+                private userService: UserService,
+                private storageService: StorageService,
+                private fb: FormBuilder) {
     }
 
     ngOnInit() {
         this.initProductionForm();
+        this.userSubscription = this.user$.subscribe((user: User | null) => {
+            if (user) {
+                this.getProductionData();
+            } else {
+                this.productivityGroup.patchValue(JSON.parse(this.storageService.getLocal('productionRates')));
+            }
+        });
+    }
+
+    ngOnDestroy() {
+        this.userSubscription.unsubscribe();
     }
 
     ngAfterViewInit() {
@@ -58,11 +82,12 @@ export class ProductivityComponent implements AfterViewInit, OnInit {
         const {parentKey, recipeKey} = this.currentlyEditing;
         const fg = this.productivityGroup.get(parentKey as string)?.get('recipes')?.get(recipeKey as string);
         fg?.patchValue({editing: false});
-        this.currentlyEditing = {} as CurrentlyEditing;
         this.resetTotal(parentKey);
+        this.updateRecipeOutput(parentKey, recipeKey);
         this.updateTotalAndRemaining(parentKey);
+        this.currentlyEditing = {} as CurrentlyEditing;
         // this.updateTotalsAndRemaining(this.productivityGroup.controls);
-        // this.saveToStorage();
+        this.saveToStorage();
     }
 
     toggleInlineInput(parentKey: string, recipeKey: string): void {
@@ -76,9 +101,60 @@ export class ProductivityComponent implements AfterViewInit, OnInit {
         }, 100);
     }
 
+    private saveToStorage(): void {
+        const saveData = {...this.productivityGroup.value};
+        for (const parentRecipe in saveData) {
+            const recipes = saveData[parentRecipe].recipes;
+            for (const recipe in recipes) {
+                delete recipes[recipe].editing;
+            }
+        }
+        if (this.authService.isLoggedIn) {
+            const userDataDoc = doc(this.firestore, `production/${this.userService.user.uid}`)
+            setDoc(userDataDoc, saveData).then(() => {
+                console.log('Saved!')
+            });
+        } else {
+            this.storageService.setLocal('productionRates', JSON.stringify(saveData));
+        }
+    }
+
     private updateTotalAndRemaining(parentKey: string): void {
+        let total = 0;
         for (const recipe in this.productivityGroup.get(parentKey)?.value.recipes) {
-            console.log(recipe)
+            const recipeRate = this.productivityGroup.get(parentKey)?.value.recipes[recipe].rate;
+            total += recipeRate;
+        }
+        const remaining = this.productivityGroup.get(parentKey)?.get('remaining')?.value;
+        this.productivityGroup.get(parentKey)?.patchValue({total: total, remaining: total - Math.abs(remaining)});
+        this.updateDependentTotal(total, parentKey, this.currentlyEditing.recipeKey);
+    }
+
+    private updateRecipeOutput(parentKey: string, recipeKey: string): void {
+        console.log(this.items[parentKey].recipes[recipeKey].outputs)
+        Object.keys(this.items[parentKey].recipes[recipeKey].outputs).filter(key => key !== parentKey).forEach(key => {
+            const {amount: parentAmount} = this.items[parentKey].recipes[recipeKey].outputs[parentKey];
+            const {amount: childAmount} = this.items[parentKey].recipes[recipeKey].outputs[key];
+            const parentRate = this.productivityGroup.get(parentKey)?.value.recipes[recipeKey].rate;
+            const recipeTotal = this.productivityGroup.get(key)?.get('total')?.value;
+            this.productivityGroup.get(key)?.get('total')?.patchValue(recipeTotal + ((childAmount / parentAmount) * parentRate));
+        });
+    }
+
+    private updateDependentTotal(total: number, parentKey: string, recipeKey: string): void {
+        // console.log(this.items[parentKey])
+        if (this.items[parentKey].isRaw) {
+            return;
+        }
+        for (const input in this.items[parentKey].recipes[recipeKey].inputs) {
+            // console.log(input, total)
+            const {amount: inputAmount} = this.items[parentKey].recipes[recipeKey].inputs[input];
+            const {amount: outputAmount} = this.items[parentKey].recipes[recipeKey].outputs[parentKey];
+            const newTotal = (total * inputAmount) / outputAmount;
+            const parentTotal = this.productivityGroup.get(input)?.get('total')?.value;
+            const currentRemaining = this.productivityGroup.get(input)?.get('remaining')?.value;
+            this.productivityGroup.get(input)?.patchValue({remaining: parentTotal - newTotal - Math.abs(currentRemaining)})
+            this.updateDependentTotal(newTotal, input, this.items[input].default);
         }
     }
 
@@ -97,7 +173,7 @@ export class ProductivityComponent implements AfterViewInit, OnInit {
     }
 
     private resetTotal(key: string): void {
-        this.productivityGroup.get(key)?.patchValue({total: 0, remaining: 0});
+        this.productivityGroup.get(key)?.patchValue({total: 0});
     }
 
     private resetAllTotals(): void {
@@ -121,6 +197,12 @@ export class ProductivityComponent implements AfterViewInit, OnInit {
                 }));
             });
         }
+    }
 
+    private getProductionData(): void {
+        const userData = doc(this.firestore, `production/${this.userService.user.uid}`)
+        docData(userData).subscribe((data: any) => {
+            this.productivityGroup.patchValue(data);
+        });
     }
 }

@@ -8,6 +8,9 @@ import { DividerModule } from 'primeng/divider';
 import { InputTextModule } from 'primeng/inputtext';
 import { ReactiveFormsModule } from '@angular/forms';
 import { AutoFocusDirective } from '../shared/auto-focus/auto-focus.directive';
+import { TableModule } from 'primeng/table';
+import { ButtonModule } from 'primeng/button';
+import { RippleModule } from 'primeng/ripple';
 
 const routes: Routes = [
     {
@@ -29,6 +32,9 @@ const routes: Routes = [
         DividerModule,
         InputTextModule,
         ReactiveFormsModule,
+        TableModule,
+        ButtonModule,
+        RippleModule
     ]
 })
 export class ProductivityModule {
