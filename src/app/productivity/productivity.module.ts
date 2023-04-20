@@ -11,6 +11,7 @@ import { AutoFocusDirective } from '../shared/auto-focus/auto-focus.directive';
 import { TableModule } from 'primeng/table';
 import { ButtonModule } from 'primeng/button';
 import { RippleModule } from 'primeng/ripple';
+import { TopBannerComponent } from '../top-banner/top-banner.component';
 
 const routes: Routes = [
     {
@@ -23,7 +24,8 @@ const routes: Routes = [
     declarations: [
         ProductivityComponent,
         FilterPipe,
-        AutoFocusDirective
+        AutoFocusDirective,
+        TopBannerComponent
     ],
     imports: [
         CommonModule,

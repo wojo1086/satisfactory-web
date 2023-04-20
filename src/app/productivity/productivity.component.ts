@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, ElementRef, inject, OnDestroy, OnInit, Renderer2, ViewChild } from '@angular/core';
 import { Items, items } from '../../assets/data/items';
-import { combineLatest, debounceTime, map, of, startWith, Subscription } from 'rxjs';
+import { BehaviorSubject, combineLatest, debounceTime, map, Observable, of, startWith, Subscription } from 'rxjs';
 import { AbstractControl, FormBuilder, FormGroup } from '@angular/forms';
 import { AuthService } from '../shared/services/auth/auth.service';
 import { doc, docData, Firestore, setDoc } from '@angular/fire/firestore';
@@ -25,9 +25,9 @@ export class ProductivityComponent implements AfterViewInit, OnInit, OnDestroy {
     private auth: Auth = inject(Auth);
     user$ = user(this.auth);
     userSubscription!: Subscription;
-    search = this.fb.control('');
+    search$ = new BehaviorSubject('');
     items: Items | any = items;
-    items$ = combineLatest([this.search.valueChanges.pipe(debounceTime(300), startWith('')), of(items)]).pipe(
+    items$ = combineLatest([this.search$.pipe(debounceTime(300), startWith('')), of(items)]).pipe(
         map((res: [string | null, Items]) => {
             const search = res[0] || '';
             const items = res[1];
@@ -75,6 +75,10 @@ export class ProductivityComponent implements AfterViewInit, OnInit, OnDestroy {
         });
     }
 
+    searched(val: any): void {
+        this.search$.next(val);
+    }
+
     save(): void {
         if (!this.currentlyEditing.recipeKey) {
             return;
@@ -99,6 +103,16 @@ export class ProductivityComponent implements AfterViewInit, OnInit, OnDestroy {
                 recipeKey
             };
         }, 100);
+    }
+
+    resetAllRecipes(): void {
+        for (const itemControl in this.productivityGroup.controls) {
+            this.productivityGroup.get(itemControl)?.patchValue({total: 0, remaining: 0});
+            for (const recipeControl in this.productivityGroup.get(itemControl)?.get('recipes')?.value) {
+                this.productivityGroup.get(itemControl)?.get('recipes')?.get(recipeControl)?.patchValue({rate: 0});
+            }
+        }
+        this.saveToStorage();
     }
 
     private saveToStorage(): void {

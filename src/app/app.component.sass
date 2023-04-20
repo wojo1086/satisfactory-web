@@ -1,0 +1,17 @@
+.sidenav
+    width: 160px
+    overflow: hidden
+
+    .nav-item
+        height: 54px
+
+    &.open
+        width: 250px
+@media (max-width: 576px)
+    .sidenav
+        position: absolute
+        left: -160px
+
+        &.open
+            position: static
+            left: 0

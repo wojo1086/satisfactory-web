@@ -1,0 +1,12 @@
+<div class="flex align-items-center top-banner px-3 surface-0 surface-border border-bottom-1 sticky top-0 z-5">
+    <i class="pi pi-bars cursor-pointer" style="font-size: 1.25rem" (click)="toggleSidenav()"></i>
+
+    <div class="flex header-search" *ngIf="showSearch">
+        <span class="p-input-icon-left">
+            <i class="pi pi-search relative"></i>
+            <input type="text" pInputText class="border-none w-10rem sm:w-20rem" [formControl]="search"
+                   placeholder="Search">
+            <i class="pi pi-times relative cursor-pointer" *ngIf="search.value?.length" (click)="search.reset()"></i>
+        </span>
+    </div>
+</div>

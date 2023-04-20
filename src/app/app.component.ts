@@ -1,8 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { AuthService, Providers } from './shared/services/auth/auth.service';
-import { Items } from '../assets/data/items';
 import { UserService } from './shared/services/user/user.service';
-import { collection, collectionData, Firestore } from '@angular/fire/firestore';
+import { Firestore } from '@angular/fire/firestore';
+import { BreakpointObserver } from '@angular/cdk/layout';
+import { distinctUntilChanged, map, withLatestFrom } from 'rxjs';
+import { SidenavService } from './shared/services/sidenav/sidenav.service';
 
 @Component({
   selector: 'app-root',
@@ -21,8 +23,23 @@ export class AppComponent {
         }
     ];
     user$ = this.userService.user$;
+    isOpen$ = this.sidenavService.isOpen$;
+    visibilityClass$ = this.sidenavService.isOpen$.pipe(
+        withLatestFrom(this.breakpointObserver.observe('(max-width: 576px)').pipe(distinctUntilChanged())),
+        map(([isOpen, breakpoint]) => {
+            let className = '';
+            if (breakpoint.matches && isOpen) {
+                className = 'open';
+            } else if (!breakpoint.matches && !isOpen) {
+                className = 'w-4rem';
+            }
+            return className;
+        })
+    );
 
     constructor(private authService: AuthService,
+                private breakpointObserver: BreakpointObserver,
+                private sidenavService: SidenavService,
                 private userService: UserService) {
     }
 
@@ -36,10 +53,4 @@ export class AppComponent {
     logout(): void {
         this.authService.logout();
     }
-
-    // private setProductionObs(): void {
-    //     const userData = collection(this.firestore, `production/${this.userService.user.uid}`)
-    //     collectionData(userData).subscribe((data: any) => console.log(data));
-    //     // this.productionDoc = this.afs.doc<Items>(`production/${this.userService.user.uid}`);
-    // }
 }
