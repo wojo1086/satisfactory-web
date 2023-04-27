@@ -13,6 +13,7 @@ export class TopBannerComponent {
     @Output() searchResult = this.search.valueChanges;
 
     constructor(private fb: FormBuilder, private sidenavService: SidenavService) {
+
     }
 
     toggleSidenav(): void {
